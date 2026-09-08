@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="RideFlow - modern ride booking UI with interactive map, fare estimation, and simulated ride tracking." />
+  <title>RideFlow — Ride Booking UI</title>
+
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="preconnect" href="https://tile.openstreetmap.org" />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIINfQ3pQ5G8r8K0m4M4f4f5bYQJ8QpG1lQ="
+    crossorigin=""
+  />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="RideFlow home">
+        <span class="brand-mark">R</span>
+        <span>Ride<span>Flow</span></span>
+      </a>
+      <div class="topbar-actions">
+        <span class="live-pill"><span></span> Live demo</span>
+        <button class="icon-btn" id="locateBtn" title="Use my current location" aria-label="Use my current location">⌖</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="map-panel">
+        <div id="map" aria-label="Interactive ride map"></div>
+
+        <div class="map-hint">
+          <span class="hint-icon">⌖</span>
+          <div>
+            <strong>Pick your route</strong>
+            <small>Click the map to set pickup and drop-off</small>
+          </div>
+        </div>
+
+        <div class="map-legend">
+          <span><i class="dot pickup"></i> Pickup</span>
+          <span><i class="dot dropoff"></i> Drop-off</span>
+        </div>
+
+        <div class="route-card" id="routeCard">
+          <div class="route-card-head">
+            <span>Route preview</span>
+            <button id="clearBtn" class="text-btn">Clear</button>
+          </div>
+          <div class="route-row">
+            <div class="route-line">
+              <i class="dot pickup"></i><span></span><i class="dot dropoff"></i>
+            </div>
+            <div class="route-copy">
+              <div><small>Pickup</small><strong id="pickupMini">Choose a point</strong></div>
+              <div><small>Drop-off</small><strong id="dropoffMini">Choose a point</strong></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="booking-panel">
+        <div class="panel-scroll">
+          <div class="eyebrow">RIDE BOOKING</div>
+          <h1>Where are you<br /><em>heading?</em></h1>
+          <p class="subheading">Choose your pickup and destination to see a live fare estimate.</p>
+
+          <div class="location-inputs">
+            <div class="location-field">
+              <span class="field-dot pickup"></span>
+              <div class="field-content">
+                <label for="pickupInput">Pickup</label>
+                <input id="pickupInput" autocomplete="off" placeholder="Search pickup location" />
+              </div>
+              <button class="field-action" id="pickupSearchBtn" aria-label="Search pickup">⌕</button>
+            </div>
+
+            <div class="location-connector"></div>
+
+            <div class="location-field">
+              <span class="field-dot dropoff"></span>
+              <div class="field-content">
+                <label for="dropoffInput">Drop-off</label>
+                <input id="dropoffInput" autocomplete="off" placeholder="Search destination" />
+              </div>
+              <button class="field-action" id="dropoffSearchBtn" aria-label="Search destination">⌕</button>
+            </div>
+          </div>
+
+          <div class="search-status" id="searchStatus" aria-live="polite"></div>
+
+          <div class="ride-options">
+            <div class="section-title">
+              <span>Choose a ride</span>
+              <span class="muted">Estimated</span>
+            </div>
+
+            <button class="ride-option active" data-type="Go" data-base="2.2" data-km="0.92" data-minute="0.18">
+              <span class="ride-icon">G</span>
+              <span class="ride-info"><strong>Go</strong><small>Everyday rides · 4 seats</small></span>
+              <span class="ride-price" id="price-Go">$—</span>
+            </button>
+
+            <button class="ride-option" data-type="Comfort" data-base="3.4" data-km="1.28" data-minute="0.22">
+              <span class="ride-icon comfort">C</span>
+              <span class="ride-info"><strong>Comfort</strong><small>Extra legroom · 4 seats</small></span>
+              <span class="ride-price" id="price-Comfort">$—</span>
+            </button>
+
+            <button class="ride-option" data-type="XL" data-base="4.8" data-km="1.65" data-minute="0.27">
+              <span class="ride-icon xl">XL</span>
+              <span class="ride-info"><strong>XL</strong><small>More space · 6 seats</small></span>
+              <span class="ride-price" id="price-XL">$—</span>
+            </button>
+          </div>
+
+          <div class="fare-card">
+            <div>
+              <span class="fare-label">ESTIMATED FARE</span>
+              <strong id="fareAmount">$—</strong>
+            </div>
+            <div class="fare-meta">
+              <span><b id="distanceValue">—</b> km</span>
+              <span>·</span>
+              <span><b id="durationValue">—</b> min</span>
+            </div>
+          </div>
+
+          <button id="bookBtn" class="book-btn" disabled>
+            <span>Request ride</span>
+            <span>→</span>
+          </button>
+
+          <p class="fine-print">Fare is an estimate for this demo. No payment is processed.</p>
+
+          <div class="status-card hidden" id="statusCard" aria-live="polite">
+            <div class="status-top">
+              <div class="driver-avatar" id="driverAvatar">JD</div>
+              <div>
+                <span class="status-label">RIDE STATUS</span>
+                <strong id="statusTitle">Finding your driver…</strong>
+              </div>
+              <span class="status-pulse"></span>
+            </div>
+            <div class="status-progress">
+              <div class="progress-track"><span id="progressBar"></span></div>
+              <div class="progress-labels">
+                <span id="statusStep1" class="current">Requested</span>
+                <span id="statusStep2">En route</span>
+                <span id="statusStep3">Arrived</span>
+              </div>
+            </div>
+            <div class="driver-info">
+              <div>
+                <strong id="driverName">Jordan D.</strong>
+                <span id="driverCar">Toyota Prius · A 4821</span>
+              </div>
+              <strong id="eta">3 min</strong>
+            </div>
+            <button class="cancel-btn" id="cancelBtn">Cancel demo ride</button>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <div class="toast" id="toast" role="status"></div>
+  </div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script src="app.js"></script>
+</body>
+</html>
